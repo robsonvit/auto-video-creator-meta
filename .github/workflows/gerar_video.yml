@@ -1,0 +1,114 @@
+name: 🎬 Gerar Vídeo Automático
+
+on:
+  workflow_dispatch:
+    inputs:
+      tema:
+        description: '🎯 Tema do vídeo'
+        required: true
+        default: 'Curiosidades incríveis sobre o universo'
+      duracao_segundos:
+        description: '⏱️ Duração em segundos'
+        required: true
+        default: '30'
+      estilo:
+        description: '🎭 Estilo da narração (educativo, dramático, motivacional, engraçado)'
+        required: false
+        default: 'educativo'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 1 — NUVEM: Gera roteiro (texto) e áudio (Fish Audio)
+  # ──────────────────────────────────────────────────────────────────────────
+  gerar-conteudo:
+    name: "☁️ Gerar Roteiro + Áudio"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout do repositório"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Configurar Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: "📦 Instalar dependências (cloud)"
+        run: pip install requests
+
+      - name: "🤖 Gerar roteiro via OpenRouter"
+        run: python scripts/01_gerar_roteiro.py
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TEMA:               ${{ inputs.tema }}
+          DURACAO_SEGUNDOS:   ${{ inputs.duracao_segundos }}
+          ESTILO:             ${{ inputs.estilo }}
+
+      - name: "🔊 Gerar áudio via Fish Audio"
+        run: pip install requests && python scripts/02_gerar_audio.py
+        env:
+          FISH_API_KEY:  ${{ secrets.FISH_API_KEY }}
+          FISH_VOICE_ID: "86f23b6596304f22955de78fe89638fc"
+
+      - name: "📤 Subir artefatos (roteiro + áudios)"
+        uses: actions/upload-artifact@v4
+        with:
+          name: conteudo-gerado
+          path: temp/
+          retention-days: 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 2 — LOCAL (self-hosted runner): imagens + vídeos + montagem final
+  # ──────────────────────────────────────────────────────────────────────────
+  gerar-e-montar-video:
+    name: "💻 Imagens + Vídeos + Montagem GPU"
+    runs-on: [self-hosted, windows, gpu]
+    needs: gerar-conteudo
+
+    steps:
+      - name: "📥 Checkout do repositório"
+        uses: actions/checkout@v4
+
+      - name: "📥 Baixar artefatos do job anterior"
+        uses: actions/download-artifact@v4
+        with:
+          name: conteudo-gerado
+          path: temp/
+
+      - name: "📦 Instalar dependências (local)"
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright requests Pillow
+          python -m playwright install chromium
+
+      - name: "🖼️ Gerar imagens no Meta.ai"
+        run: python scripts/03_automacao_metaai.py
+        env:
+          CHROME_USER_DATA_DIR: ${{ secrets.CHROME_USER_DATA_DIR }}
+          CHROME_PROFILE:       "Default"
+          META_DOWNLOAD_DIR:    ${{ secrets.META_DOWNLOAD_DIR }}
+
+      - name: "🎬 Animar imagens no Vibes.ai"
+        run: python scripts/04_automacao_vibes.py
+        env:
+          CHROME_USER_DATA_DIR: ${{ secrets.CHROME_USER_DATA_DIR }}
+          CHROME_PROFILE:       "Default"
+          VIBES_DOWNLOAD_DIR:   ${{ secrets.VIBES_DOWNLOAD_DIR }}
+
+      - name: "🔧 Montar vídeo final com GPU"
+        run: python scripts/05_montar_video.py
+        env:
+          RESOLUCAO:    "1280x720"
+          FPS:          "30"
+          DUR_TRANSICAO: "0.5"
+          VOL_MUSICA:   "0.15"
+          USE_GPU:      "auto"
+          MUSICA_FUNDO: "music/background.mp3"
+
+      - name: "📤 Subir vídeo final como artefato"
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-final
+          path: output/
+          retention-days: 7

@@ -1,0 +1,18 @@
+{
+  "duracao_segundos": 30,
+  "tema": "",
+  "estilo_video": "cinematico",
+  "resolucao": "1280x720",
+  "fps": 30,
+  "duracao_transicao": 0.5,
+  "volume_musica_fundo": 0.15,
+  "musica_padrao": "music/background.mp3",
+  "modelo_roteiro": "meta-llama/llama-3.2-3b-instruct:free",
+  "fish_voice_id": "86f23b6596304f22955de78fe89638fc",
+  "fish_model": "s2.1-pro-free",
+  "fish_api_url": "https://api.fish.audio/v1/tts",
+  "meta_pasta_download": "C:/Users/robso/Downloads/meta-folder-1",
+  "vibes_pasta_download": "C:/Users/robso/Downloads/vibes-folder-1",
+  "chrome_user_data_dir": "C:/Users/robso/AppData/Local/Google/Chrome/User Data",
+  "chrome_profile": "Default"
+}
